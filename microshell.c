@@ -7,7 +7,7 @@ int	put_std_err(char *str)
 	return (1);
 }
 
-int	cd(int ac, char **av)
+int	builtin_cd(int ac, char **av)
 {
 	if (ac != 2)
 		return (put_std_err("error: cd: bad arguments\n"));
@@ -15,34 +15,36 @@ int	cd(int ac, char **av)
 		return (put_std_err("error: cd: cannot change directory to "), put_std_err(av[1]), put_std_err("\n"));
 	return (0);
 }
-int executor(int i, char **av, char **envp)
+
+int	executor(int i, char **av, char **envp)
 {
 	int	has_pipe;
 	int	fd[2];
-	int pid;
-	int status;
-	
+	int	pid;
+	int	status;
+
 	has_pipe = av[i] && !strcmp(av[i], "|");
-	if(!has_pipe && !strcmp(*av, "cd"))
-		return (cd(i, av));
-	if(has_pipe && pipe(fd) == -1)
+	if (!has_pipe && !strcmp(*av, "cd"))
+		return (builtin_cd(i, av));
+	if (has_pipe && pipe(fd) == -1)
 		return (put_std_err("error: fatal\n"));
 	pid = fork();
-	if(!pid)
+	if (!pid)
 	{
 		av[i] = 0;
-		if(has_pipe && (dup2(fd[1], STDOUT_FILENO) == -1 || close(fd[0]) == -1 || close(fd[1]) == -1))
+		if (has_pipe && (dup2(fd[1], STDOUT_FILENO) == -1 || close(fd[0]) == -1 || close(fd[1]) == -1))
 			return (put_std_err("error: fatal\n"));
-		if(!strcmp(*av, "cd"))
-			return (cd(i, av));
+		if (!strcmp(*av, "cd"))
+			return (builtin_cd(i, av));
 		execve(*av, av, envp);
 		return (put_std_err("error: cannot execute "), put_std_err(*av), put_std_err("\n"));
 	}
 	waitpid(pid, &status, 0);
-	if(has_pipe && (dup2(fd[0], STDIN_FILENO) == -1 || close(fd[0]) == -1 || close(fd[1]) == -1))
+	if (has_pipe && (dup2(fd[0], STDIN_FILENO) == -1 || close(fd[0]) == -1 || close(fd[1]) == -1))
 		return (put_std_err("error: fatal\n"));
 	return (WIFEXITED(status) && WEXITSTATUS(status));
 }
+
 int	main(int ac, char **av, char **envp)
 {
 	int status = 0;
@@ -57,7 +59,7 @@ int	main(int ac, char **av, char **envp)
 			while (av[i] && (strcmp(av[i], "|") && strcmp(av[i], ";")))
 				i++;
 			if (i)
-				status = executor(i, av, envp);			
+				status = executor(i, av, envp);
 		}
 	}
 	return (status);
